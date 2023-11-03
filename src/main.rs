@@ -3,7 +3,7 @@ use num::{integer::Roots,complex::Complex};
 
 const one_sqr_two: f32 = 0.7071067811865475;
 
-#[derive(Debug)]
+#[derive(Clone,Debug)]
 struct QuantumState {
     n: u32,
     state: Array1<Complex<f32>>,
@@ -37,13 +37,37 @@ impl QuantumState {
 	self.gate_apply(gate, i)
     }
 
-    fn print(&self) {
+    fn cnot(&self,i: u32) -> Self {
+	let gate = Array::from_shape_vec((4, 4), vec![
+	    Complex::new(1.0,0.0),Complex::new(0.0,0.0),Complex::new(0.0,0.0),Complex::new(0.0,0.0),
+	    Complex::new(0.0,0.0),Complex::new(1.0,0.0),Complex::new(0.0,0.0),Complex::new(0.0,0.0),
+	    Complex::new(0.0,0.0),Complex::new(0.0,0.0),Complex::new(0.0,0.0),Complex::new(1.0,0.0),
+	    Complex::new(0.0,0.0),Complex::new(0.0,0.0),Complex::new(1.0,0.0),Complex::new(0.0,0.0),
+	]
+	).unwrap();
+
+	self.gate_apply(gate,i)
+    }
+
+    fn t_gate(&self,i: u32) -> Self {
+	let gate = Array::from_shape_vec((2, 2), vec![
+	    Complex::new(1.0,0.0),Complex::new(0.0,0.0),Complex::new(0.0,0.0),Complex::new(one_sqr_two + one_sqr_two,1.0)]
+	).unwrap();
+
+	self.gate_apply(gate,i)
+    }
+
+    fn print(&self) -> Self {
 	println!("{:?}",self);
+
+	self.clone()
     }
 }
 
 fn main() {
-    let q = QuantumState::new(3)
+    //quantum hello world
+    QuantumState::new(2)
 	.hadamard(0)
-        .print();
+	.cnot(0)
+	.print();
 }
