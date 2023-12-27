@@ -83,3 +83,12 @@ impl QuantumState {
 	self.clone()
     }
 }
+
+fn main() {
+  	QuantumState::new(2)
+		.hadamard(0)
+		.cnot(0)
+		.measure()
+		.print();
+}
+
