@@ -1,5 +1,6 @@
 use ndarray::{Array, Array1,Array2};
-use num::{integer::Roots,complex::Complex};
+use num::{integer::Roots,complex::{Complex}};
+use rand::prelude::*;
 
 const one_sqr_two: f32 = 0.7071067811865475;
 
@@ -57,17 +58,28 @@ impl QuantumState {
 	self.gate_apply(gate,i)
     }
 
-    fn print(&self) -> Self {
-	println!("{:?}",self);
+    fn measure(&self) -> Self {
+	Self {
+	    n: self.n,
+	    state: self.state.iter().map(|qubit| {
+		// i hope i understood the Born rule correctely
+		let chance = qubit.im.powf(2.0);
+		let mut rng = rand::thread_rng();
+		let rand = rng.gen_range(0.0..1.0);
 
+		if chance < rand {
+		    return Complex::new(1.0,0.0);
+		}
+		
+		return Complex::new(0.0,1.0);
+	    }).collect()
+	}
+    }
+
+    fn print(&self) -> Self {
+	self.state.iter().enumerate().for_each(|(x,y)| {
+	    println!("quibit {x}: {y}");
+	}); 
 	self.clone()
     }
-}
-
-fn main() {
-    //quantum hello world
-    QuantumState::new(2)
-	.hadamard(0)
-	.cnot(0)
-	.print();
 }
