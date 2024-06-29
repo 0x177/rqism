@@ -9,6 +9,7 @@ pub struct QuantumState {
     pub n: usize,
     pub state: Array1<Complex<f32>>,
     pub reg: usize,
+    pub rng: ThreadRng
 }
 
 fn kron_expt(u: &Array2::<Complex<f32>>, n: usize) -> Array2::<Complex<f32>> {
@@ -51,17 +52,19 @@ fn tta(t: &Vec<(usize, usize)>) -> Vec<usize> {
 
 impl QuantumState {
     pub fn new(n: usize) -> Self {
+	let rng = rand::thread_rng();
         let mut state = Array::zeros(2usize.pow(n as u32));
         state[[0]] = Complex::new(1.0, 0.0);
 
-        Self { n, state, reg: 0}
+        Self { n, state, reg: 0,rng}
     }
     
     pub fn gate_apply_sq(&self,t: &Array2<Complex<f32>>,i: usize) -> Self {
 	Self {
 	    n: self.n,
 	    state: lift(t,i,self.n).dot(&self.state),
-	    reg: 0
+	    reg: 0,
+	    rng: self.rng.clone()
 	}
     }
 
@@ -97,6 +100,7 @@ impl QuantumState {
             n: self.n,
             state: all.dot(&self.state),
 	    reg: 0,
+	    rng: self.rng.clone()
 	}
     }
     
@@ -137,8 +141,8 @@ impl QuantumState {
     }
 
     pub fn measure(&self) -> Self {
-	let mut rng = rand::thread_rng();
-	let mut rand = rng.gen_range(0.0..1.0);
+	let mut s = self.clone();
+	let mut rand = s.rng.gen_range(0.0..1.0);
 	let mut k: i32 = -1;
 	
 	for (i,theta) in self.state.iter().enumerate() {
@@ -152,13 +156,22 @@ impl QuantumState {
 	if k == -1 {
 	    k = self.n as i32 - 1;
 	}
-	
-	let mut s = self.clone();
 
 	s.state.fill(0.0.into());
 	s.state[0] = 1.0.into();
 	s.reg = k as usize;
 
+	return s;
+    }
+
+    pub fn measure_qubits(&self,indices: &[usize]) -> Self {
+	let mut s = self.clone();
+
+	for i in indices {
+	    let rand = s.rng.gen_range(0.0..1.0);
+	    s.state[*i] = if rand >= s.state[*i].re {Complex::new(1.0,0.0)} else {Complex::new(0.0,0.0)}
+	}
+	
 	return s;
     }
 
