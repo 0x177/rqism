@@ -2,6 +2,9 @@ use ndarray::{array,Array, Array1,Array2,linalg::kron};
 use num::{complex::{Complex}};
 use rand::prelude::*;
 
+mod instruction;
+use crate::instruction::Instruction;
+
 const ONE_SQR_TWO: f32 = 0.7071067811865475;
 
 #[derive(Clone,Debug)]
@@ -103,41 +106,26 @@ impl QuantumState {
 	    rng: self.rng.clone()
 	}
     }
-    
-    pub fn hadamard(&self,i: usize) -> Self {
-	let gate = Complex::new(ONE_SQR_TWO,0.0) * Array::from_shape_vec((2, 2), vec![
-	    Complex::new(1.0,0.0),Complex::new(1.0,0.0),Complex::new(1.0,0.0),Complex::new(-1.0,0.0)]
-	).unwrap();
 
-	self.gate_apply_sq(&gate, i)
+    pub fn execute_instruction(&self,ins: &Instruction) -> Self {
+	match ins {
+	    Instruction::Gate {matrix,indices} => {
+		if indices.len() == 1 {
+		    self.gate_apply_sq(&matrix,indices[0])
+		} else {
+		    self.gate_apply_nq(&matrix,indices)
+		}
+	    },
+	    Instruction::Measure {indices} => {
+		self.measure_qubits(indices)
+	    }
+	}
     }
 
-    pub fn not(&self,i: usize) -> Self {
-	let gate = Array::from_shape_vec((2,2), vec![
-	    Complex::new(0.0,0.0),Complex::new(1.0,0.0),Complex::new(1.0,0.0),Complex::new(0.0,0.0)
-	]).unwrap();
+    pub fn execute_circuit(&self,circuit: Vec<Instruction>,index: usize) -> Self {
+	if index == circuit.len() {return self.clone()}
 
-	self.gate_apply_sq(&gate, i)
-    }
-
-    pub fn cnot(&self,i: &[usize]) -> Self {
-	let gate = Array::from_shape_vec((4, 4), vec![
-	    Complex::new(1.0,0.0),Complex::new(0.0,0.0),Complex::new(0.0,0.0),Complex::new(0.0,0.0),
-	    Complex::new(0.0,0.0),Complex::new(1.0,0.0),Complex::new(0.0,0.0),Complex::new(0.0,0.0),
-	    Complex::new(0.0,0.0),Complex::new(0.0,0.0),Complex::new(0.0,0.0),Complex::new(1.0,0.0),
-	    Complex::new(0.0,0.0),Complex::new(0.0,0.0),Complex::new(1.0,0.0),Complex::new(0.0,0.0),
-	]
-	).unwrap();
-
-	self.gate_apply_nq(&gate,i)
-    }
-
-    pub fn t_gate(&self,i: usize) -> Self {
-	let gate = Array::from_shape_vec((2, 2), vec![
-	    Complex::new(1.0,0.0),Complex::new(0.0,0.0),Complex::new(0.0,0.0),Complex::new(ONE_SQR_TWO + ONE_SQR_TWO,1.0)]
-	).unwrap();
-
-	self.gate_apply_sq(&gate,i)
+	(self.execute_instruction(&circuit[index])).execute_circuit(circuit,index+1)
     }
 
     pub fn measure(&self) -> Self {
@@ -192,12 +180,16 @@ mod tests {
 	// bell
 	let mut counts = vec![0; 4];
 	let machine = QuantumState::new(2);
+
+	let circuit = vec![
+	    Instruction::hadamard(0),
+	    Instruction::cnot(vec![0,1]),
+	    Instruction::Measure {indices: vec![0,1]}
+	];
 	
 	for _ in 0..1000 {
 	    counts[machine
-		   .hadamard(0)
-		   .not(0)
-		   .cnot(&[0,1])
+		   .execute_circuit(circuit.clone(),0)
 		   .measure()
 		   .reg
 	    ] += 1;
