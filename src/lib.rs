@@ -5,8 +5,6 @@ use rand::prelude::*;
 mod instruction;
 use crate::instruction::Instruction;
 
-const ONE_SQR_TWO: f32 = 0.7071067811865475;
-
 #[derive(Clone,Debug)]
 pub struct QuantumState {
     pub n: usize,
@@ -178,7 +176,7 @@ mod tests {
     #[test]
     fn bell() {
 	// bell
-	let mut counts = vec![0; 4];
+	let mut counts: [i32; 4] = [0; 4];
 	let machine = QuantumState::new(2);
 
 	let circuit = vec![
@@ -195,7 +193,7 @@ mod tests {
 	    ] += 1;
 	}
 
-	println!("{:?}",counts);
+	assert!((counts[1]-500).abs()+(counts[3]-500).abs() < 50);
     }
 }
 
